@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'local.dart';
 
 class WeatherPage extends StatefulWidget {
   const WeatherPage({super.key});
@@ -36,7 +37,7 @@ class _WeatherPageState extends State<WeatherPage> {
       return;
     }
 
-    final apiKey = "9e6802f05f846e87a88d8224c1a48084";
+    final apiKey = openWeatherApiKey;
     final url = Uri.parse(
       "https://api.openweathermap.org/data/2.5/weather?q=$city&appid=$apiKey&units=metric",
     );
@@ -49,8 +50,7 @@ class _WeatherPageState extends State<WeatherPage> {
           result =
               "Temp: ${data['main']?['temp']?.round() ?? 0}°C\n"
               "Feels like: ${data['main']?['feels_like']?.round() ?? 0}°C\n"
-              "Weather: ${data['weather'] != null && data['weather'].isNotEmpty ? data['weather'][0]['description'] 
-              : 'N/A'}";
+              "Weather: ${data['weather'] != null && data['weather'].isNotEmpty ? data['weather'][0]['description'] : 'N/A'}";
         });
       } else {
         setState(() {
@@ -68,7 +68,7 @@ class _WeatherPageState extends State<WeatherPage> {
     final city = _cityController.text.trim();
     if (city.isEmpty) return;
 
-    final apiKey = "9e6802f05f846e87a88d8224c1a48084";
+    final apiKey = openWeatherApiKey;
     final url = Uri.parse(
       "https://api.openweathermap.org/data/2.5/forecast?q=$city&appid=$apiKey&units=metric",
     );
