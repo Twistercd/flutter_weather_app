@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'local.dart';
+import 'data/weather_repository.dart';
 
 class WeatherPage extends StatefulWidget {
   const WeatherPage({super.key});
@@ -13,14 +12,44 @@ class WeatherPage extends StatefulWidget {
 class _WeatherPageState extends State<WeatherPage> {
   final TextEditingController _cityController = TextEditingController();
 
-  String result = ""; // текущая погода
+  late final WeatherRepository _repository;
 
-  //String cityName = "Kyiv"; // заглушка города
-  //double temperature = 20; // заглушка температуры
-  //String description = "Sunny"; // заглушка описания погоды
-
-  List<Map<String, dynamic>> threeDayForecast = []; // 3-дневный прогноз
+  String result = "";
   bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository = WeatherRepository(openWeatherApiKey);
+  }
+
+  String parseCurrentWeather(Map<String, dynamic> data) {
+    final temp = data['list'][0]['main']['temp'].round();
+    final description = data['list'][0]['weather'][0]['description'];
+
+    return "Now: $temp°C, $description";
+  }
+
+  List<String> threeDayForecast = []; // 3-дневный прогноз
+
+  List<String> fetchThreeDayForecast(Map<String, dynamic> data) {
+    final List list = data['list'] ?? [];
+    final List<String> forecast = [];
+
+    for (int i = 0; i < list.length && forecast.length < 3; i += 8) {
+      final day = list[i];
+      if (day == null) continue;
+
+      final temp = (day['main']?['temp'] ?? 0).round();
+      final desc = day['weather'] != null && day['weather'].isNotEmpty
+          ? day['weather'][0]['description']
+          : "N/A";
+
+      forecast.add("Day ${forecast.length + 1}: $temp°C, $desc");
+    }
+
+    return forecast;
+  }
 
   @override
   void dispose() {
@@ -30,84 +59,27 @@ class _WeatherPageState extends State<WeatherPage> {
 
   Future<void> fetchWeather() async {
     final city = _cityController.text.trim();
-    if (city.isEmpty) {
-      setState(() {
-        result = "Enter a city name!";
-      });
-      return;
-    }
-
-    final apiKey = openWeatherApiKey;
-    final url = Uri.parse(
-      "https://api.openweathermap.org/data/2.5/weather?q=$city&appid=$apiKey&units=metric",
-    );
-
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          result =
-              "Temp: ${data['main']?['temp']?.round() ?? 0}°C\n"
-              "Feels like: ${data['main']?['feels_like']?.round() ?? 0}°C\n"
-              "Weather: ${data['weather'] != null && data['weather'].isNotEmpty ? data['weather'][0]['description'] : 'N/A'}";
-        });
-      } else {
-        setState(() {
-          result = "City not found or API error!";
-        });
-      }
-    } catch (e) {
-      setState(() {
-        result = "Network error";
-      });
-    }
-  }
-
-  Future<void> fetchThreeDayForecast() async {
-    final city = _cityController.text.trim();
     if (city.isEmpty) return;
 
-    final apiKey = openWeatherApiKey;
-    final url = Uri.parse(
-      "https://api.openweathermap.org/data/2.5/forecast?q=$city&appid=$apiKey&units=metric",
-    );
+    setState(() => isLoading = true);
 
     try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List list = data['list'] ?? [];
+      final data = await _repository.fetchWeather(city);
 
-        threeDayForecast.clear();
+      final current = parseCurrentWeather(data);
+      final forecast = fetchThreeDayForecast(data);
 
-        // берем раз в 8 блоков (примерно 24ч)
-        for (int i = 0; i < list.length && threeDayForecast.length < 3; i += 8) {
-          final day = list[i];
-          if (day == null) continue;
-
-          threeDayForecast.add({
-            "temp": day['main']?['temp'] ?? 0,
-            "feels_like": day['main']?['feels_like'] ?? 0,
-            "description": day['weather'] != null && day['weather'].isNotEmpty
-                ? day['weather'][0]['description']
-                : "N/A",
-            "date": day['dt_txt'] ?? "",
-          });
-        }
-
-        setState(() {}); // обновляем UI
-      } else {
-        setState(() {
-          threeDayForecast.clear();
-          result = "Forecast not found or API error!";
-        });
-      }
+      setState(() {
+        result = current;
+        threeDayForecast = forecast;
+      });
     } catch (e) {
       setState(() {
+        result = "Error loading weather";
         threeDayForecast.clear();
-        result = "Network error";
       });
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 
@@ -136,7 +108,6 @@ class _WeatherPageState extends State<WeatherPage> {
                         isLoading = true;
                       });
                       await fetchWeather();
-                      await fetchThreeDayForecast();
                       setState(() {
                         isLoading = false;
                       });
@@ -151,14 +122,8 @@ class _WeatherPageState extends State<WeatherPage> {
             if (threeDayForecast.isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: threeDayForecast.map((day) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      "${day['date'] ?? 'Unknown'}: ${day['temp']?.round() ?? 0}°C, feels like ${day['feels_like']?.round() ?? 0}°C, ${day['description'] ?? 'N/A'}",
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  );
+                children: threeDayForecast.map((text) {
+                  return Text(text);
                 }).toList(),
               ),
           ],
