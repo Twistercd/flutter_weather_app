@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'local.dart';
-import 'data/weather_repository.dart';
+import 'state/weather_state.dart';
+import 'package:provider/provider.dart';
 
 class WeatherPage extends StatefulWidget {
   const WeatherPage({super.key});
@@ -12,75 +12,10 @@ class WeatherPage extends StatefulWidget {
 class _WeatherPageState extends State<WeatherPage> {
   final TextEditingController _cityController = TextEditingController();
 
-  late final WeatherRepository _repository;
-
-  String result = "";
-  bool isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _repository = WeatherRepository(openWeatherApiKey);
-  }
-
-  String parseCurrentWeather(Map<String, dynamic> data) {
-    final temp = data['list'][0]['main']['temp'].round();
-    final description = data['list'][0]['weather'][0]['description'];
-
-    return "Now: $temp°C, $description";
-  }
-
-  List<String> threeDayForecast = []; // 3-дневный прогноз
-
-  List<String> fetchThreeDayForecast(Map<String, dynamic> data) {
-    final List list = data['list'] ?? [];
-    final List<String> forecast = [];
-
-    for (int i = 0; i < list.length && forecast.length < 3; i += 8) {
-      final day = list[i];
-      if (day == null) continue;
-
-      final temp = (day['main']?['temp'] ?? 0).round();
-      final desc = day['weather'] != null && day['weather'].isNotEmpty
-          ? day['weather'][0]['description']
-          : "N/A";
-
-      forecast.add("Day ${forecast.length + 1}: $temp°C, $desc");
-    }
-
-    return forecast;
-  }
-
   @override
   void dispose() {
     _cityController.dispose();
     super.dispose();
-  }
-
-  Future<void> fetchWeather() async {
-    final city = _cityController.text.trim();
-    if (city.isEmpty) return;
-
-    setState(() => isLoading = true);
-
-    try {
-      final data = await _repository.fetchWeather(city);
-
-      final current = parseCurrentWeather(data);
-      final forecast = fetchThreeDayForecast(data);
-
-      setState(() {
-        result = current;
-        threeDayForecast = forecast;
-      });
-    } catch (e) {
-      setState(() {
-        result = "Error loading weather";
-        threeDayForecast.clear();
-      });
-    } finally {
-      setState(() => isLoading = false);
-    }
   }
 
   @override
@@ -101,31 +36,43 @@ class _WeatherPageState extends State<WeatherPage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      setState(() {
-                        isLoading = true;
-                      });
-                      await fetchWeather();
-                      setState(() {
-                        isLoading = false;
-                      });
-                    },
+              onPressed: () {
+                final city = _cityController.text.trim();
+                if (city.isEmpty) return;
+
+                context.read<WeatherState>().fetchWeather(city);
+              },
               child: const Text("Get weather"),
             ),
+
             const SizedBox(height: 20),
-            if (isLoading) const Center(child: CircularProgressIndicator()),
+            Consumer<WeatherState>(
+              builder: (context, state, _) {
+                return state.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : const SizedBox.shrink();
+              },
+            ),
+
             const SizedBox(height: 20),
-            Text(result, style: const TextStyle(fontSize: 20)),
+            Consumer<WeatherState>(
+              builder: (context, state, _) {
+                return Text(state.result, style: const TextStyle(fontSize: 20));
+              },
+            ),
             const SizedBox(height: 20),
-            if (threeDayForecast.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: threeDayForecast.map((text) {
-                  return Text(text);
-                }).toList(),
-              ),
+            Consumer<WeatherState>(
+              builder: (context, state, _) {
+                if (state.threeDayForecast.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: state.threeDayForecast.map((text) => Text(text)).toList(),
+                );
+              },
+            ),
           ],
         ),
       ),

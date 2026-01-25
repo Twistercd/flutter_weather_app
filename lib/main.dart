@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
-import 'weather_page.dart'; // импорт страницы с погодой
+import 'package:provider/provider.dart';
+import 'local.dart';
+import 'data/weather_repository.dart';
+import 'state/weather_state.dart';
+import 'weather_page.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => WeatherState(
+        WeatherRepository(openWeatherApiKey)
+      ),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
