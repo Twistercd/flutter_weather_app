@@ -7,16 +7,12 @@ class WeatherState extends ChangeNotifier {
 
   WeatherState(this.repository);
 
-  String result = "";
+  String? currentWeatherType;
+
+  int? currentTemp;
+  String? currentDescription;
   List<String> threeDayForecast = [];
   bool isLoading = false;
-
-  String parseCurrentWeather(Map<String, dynamic> data) {
-    final temp = data['list'][0]['main']['temp'].round();
-    final description = data['list'][0]['weather'][0]['description'];
-
-    return "Now: $temp°C, $description";
-  }
 
   List<String> parseThreeDayForecast(Map<String, dynamic> data) {
     final List list = data['list'] ?? [];
@@ -38,21 +34,51 @@ class WeatherState extends ChangeNotifier {
   }
 
   Future<void> fetchWeather(String city) async {
-    if (city.isEmpty) return;
+  if (city.isEmpty) return;
 
-    isLoading = true;
+  isLoading = true;
+  notifyListeners();
+
+  try {
+    final data = await repository.fetchWeather(city);
+
+    final current = data['list'][0];
+
+    currentTemp = (current['main']?['temp'] ?? 0).round();
+    currentDescription = current['weather']?[0]?['description'];
+    currentWeatherType = current['weather']?[0]?['main'];
+
+    threeDayForecast = parseThreeDayForecast(data);
+  } catch (e) {
+    currentTemp = null;
+    currentDescription = null;
+    currentWeatherType = null;
+    threeDayForecast = [];
+  } finally {
+    isLoading = false;
     notifyListeners();
+  }
+}
 
-    try {
-      final data = await repository.fetchWeather(city);
-      result = parseCurrentWeather(data);
-      threeDayForecast = parseThreeDayForecast(data);
-    } catch (e) {
-      result = "Error loading weather";
-      threeDayForecast = [];
-    } finally {
-      isLoading = false;
-      notifyListeners();
+
+  IconData getWeatherIcon(String? type) {
+    switch (type) {
+      case 'Clear':
+        return Icons.wb_sunny;
+      case 'Clouds':
+        return Icons.cloud;
+      case 'Rain':
+        return Icons.umbrella;
+      case 'Drizzle':
+        return Icons.grain;
+      case 'Thunderstorm':
+        return Icons.flash_on;
+      case 'Snow':
+        return Icons.ac_unit;
+      default:
+        return Icons.wb_cloudy;
     }
   }
+
+  
 }

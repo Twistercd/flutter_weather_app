@@ -2,80 +2,165 @@ import 'package:flutter/material.dart';
 import 'state/weather_state.dart';
 import 'package:provider/provider.dart';
 
-class WeatherPage extends StatefulWidget {
-  const WeatherPage({super.key});
+class WeatherPage extends StatelessWidget {
+  WeatherPage({super.key});
 
-  @override
-  State<WeatherPage> createState() => _WeatherPageState();
-}
-
-class _WeatherPageState extends State<WeatherPage> {
   final TextEditingController _cityController = TextEditingController();
-
-  @override
-  void dispose() {
-    _cityController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Weather Forecast")),
+      appBar: AppBar(title: const Text("Weather"), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
-              controller: _cityController,
-              decoration: const InputDecoration(
-                labelText: "Enter city",
-                border: OutlineInputBorder(),
+            _CityInput(controller: _cityController),
+            const SizedBox(height: 16),
+            _WeatherContent(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CityInput extends StatelessWidget {
+  final TextEditingController controller;
+
+  const _CityInput({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            decoration: const InputDecoration(hintText: "Enter city", border: OutlineInputBorder()),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: () {
+            context.read<WeatherState>().fetchWeather(controller.text);
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _WeatherContent extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<WeatherState>(
+      builder: (context, state, _) {
+        if (state.isLoading) {
+          return const Padding(
+            padding: EdgeInsets.only(top: 32),
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        if (state.currentTemp != null && state.currentDescription != null) {
+          return Column(
+            children: [
+              _CurrentWeatherCard(
+                temperature: state.currentTemp!,
+                description: state.currentDescription!,
+                weatherType: state.currentWeatherType,
               ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                final city = _cityController.text.trim();
-                if (city.isEmpty) return;
+              const SizedBox(height: 16),
+              _ForecastList(forecast: state.threeDayForecast),
+            ],
+          );
+        }
+        return const Padding(
+          padding: EdgeInsets.only(top: 32),
+          child: Text(
+            "Enter a city to see the weather forecast",
+            style: TextStyle(color: Colors.grey),
+          ),
+        );
+      },
+    );
+  }
+}
 
-                context.read<WeatherState>().fetchWeather(city);
-              },
-              child: const Text("Get weather"),
-            ),
+class _CurrentWeatherCard extends StatelessWidget {
+  final int temperature;
+  final String description;
+  final String? weatherType;
 
-            const SizedBox(height: 20),
-            Consumer<WeatherState>(
-              builder: (context, state, _) {
-                return state.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : const SizedBox.shrink();
-              },
-            ),
+  const _CurrentWeatherCard({
+    required this.temperature,
+    required this.description,
+    required this.weatherType,
+  });
 
-            const SizedBox(height: 20),
-            Consumer<WeatherState>(
-              builder: (context, state, _) {
-                return Text(state.result, style: const TextStyle(fontSize: 20));
-              },
-            ),
-            const SizedBox(height: 20),
-            Consumer<WeatherState>(
-              builder: (context, state, _) {
-                if (state.threeDayForecast.isEmpty) {
-                  return const SizedBox.shrink();
-                }
+  IconData getWeatherIcon(String? type) {
+    switch (type) {
+      case 'Clear':
+        return Icons.wb_sunny;
+      case 'Clouds':
+        return Icons.cloud;
+      case 'Rain':
+        return Icons.umbrella;
+      case 'Snow':
+        return Icons.ac_unit;
+      case 'Thunderstorm':
+        return Icons.flash_on;
+      default:
+        return Icons.help_outline;
+    }
+  }
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: state.threeDayForecast.map((text) => Text(text)).toList(),
-                );
-              },
+  @override
+  Widget build(BuildContext context) {
+    final icon = getWeatherIcon(weatherType);
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, size: 48),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "$temperature°C",
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                Text(description),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ForecastList extends StatelessWidget {
+  final List<String> forecast;
+
+  const _ForecastList({required this.forecast});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: forecast.map((day) {
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          child: Padding(padding: const EdgeInsets.all(12), child: Text(day)),
+        );
+      }).toList(),
     );
   }
 }

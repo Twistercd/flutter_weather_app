@@ -21,6 +21,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(title: 'Weather App', home: const WeatherPage());
+    return MaterialApp(title: 'Weather App', home: WeatherPage());
   }
 }
