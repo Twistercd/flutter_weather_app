@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '/data/weather_repository.dart';
-
+import '../models/weather.dart';
 
 class WeatherState extends ChangeNotifier {
   final WeatherRepository repository;
@@ -34,32 +34,31 @@ class WeatherState extends ChangeNotifier {
   }
 
   Future<void> fetchWeather(String city) async {
-  if (city.isEmpty) return;
+    if (city.isEmpty) return;
 
-  isLoading = true;
-  notifyListeners();
-
-  try {
-    final data = await repository.fetchWeather(city);
-
-    final current = data['list'][0];
-
-    currentTemp = (current['main']?['temp'] ?? 0).round();
-    currentDescription = current['weather']?[0]?['description'];
-    currentWeatherType = current['weather']?[0]?['main'];
-
-    threeDayForecast = parseThreeDayForecast(data);
-  } catch (e) {
-    currentTemp = null;
-    currentDescription = null;
-    currentWeatherType = null;
-    threeDayForecast = [];
-  } finally {
-    isLoading = false;
+    isLoading = true;
     notifyListeners();
-  }
-}
 
+    try {
+      final Weather weather = await repository.fetchWeather(city);
+
+      final current = weather.fromJson['list'][0];
+
+      currentTemp = (current['main']?['temp'] ?? 0).round();
+      currentDescription = current['weather']?[0]?['description'];
+      currentWeatherType = current['weather']?[0]?['main'];
+
+      threeDayForecast = parseThreeDayForecast(data);
+    } catch (e) {
+      currentTemp = null;
+      currentDescription = null;
+      currentWeatherType = null;
+      threeDayForecast = [];
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
   IconData getWeatherIcon(String? type) {
     switch (type) {
@@ -79,6 +78,4 @@ class WeatherState extends ChangeNotifier {
         return Icons.wb_cloudy;
     }
   }
-
-  
 }
