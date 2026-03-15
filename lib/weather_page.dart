@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'state/weather_state.dart';
+import 'data/models/weather_item.dart';
 import 'package:provider/provider.dart';
 
-class WeatherPage extends StatelessWidget {
-  WeatherPage({super.key});
+class WeatherPage extends StatefulWidget {
+  const WeatherPage({super.key});
 
+  @override
+  State<WeatherPage> createState() => _WeatherPageState();
+}
+
+class _WeatherPageState extends State<WeatherPage> {
   final TextEditingController _cityController = TextEditingController();
+
+  @override
+  void dispose() {
+    _cityController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +29,7 @@ class WeatherPage extends StatelessWidget {
           children: [
             _CityInput(controller: _cityController),
             const SizedBox(height: 16),
-            _WeatherContent(),
+            const _WeatherContent(),
           ],
         ),
       ),
@@ -37,7 +49,10 @@ class _CityInput extends StatelessWidget {
         Expanded(
           child: TextField(
             controller: controller,
-            decoration: const InputDecoration(hintText: "Enter city", border: OutlineInputBorder()),
+            decoration: const InputDecoration(
+              hintText: "Enter city",
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -53,6 +68,8 @@ class _CityInput extends StatelessWidget {
 }
 
 class _WeatherContent extends StatelessWidget {
+  const _WeatherContent();
+
   @override
   Widget build(BuildContext context) {
     return Consumer<WeatherState>(
@@ -64,19 +81,30 @@ class _WeatherContent extends StatelessWidget {
           );
         }
 
-        if (state.currentTemp != null && state.currentDescription != null) {
+        if (state.errorMessage != null) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 32),
+            child: Text(
+              state.errorMessage! ,
+              style: const TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        if (state.currentTemp != null) {
           return Column(
             children: [
               _CurrentWeatherCard(
-                temperature: state.currentTemp!,
+                temperature: state.currentTemp! ,
                 description: state.currentDescription!,
                 weatherType: state.currentWeatherType,
               ),
               const SizedBox(height: 16),
-              _ForecastList(forecast: state.threeDayForecast),
+              _ForecastList(forecast: state.forecast),
             ],
           );
         }
+
         return const Padding(
           padding: EdgeInsets.only(top: 32),
           child: Text(
@@ -100,26 +128,9 @@ class _CurrentWeatherCard extends StatelessWidget {
     required this.weatherType,
   });
 
-  IconData getWeatherIcon(String? type) {
-    switch (type) {
-      case 'Clear':
-        return Icons.wb_sunny;
-      case 'Clouds':
-        return Icons.cloud;
-      case 'Rain':
-        return Icons.umbrella;
-      case 'Snow':
-        return Icons.ac_unit;
-      case 'Thunderstorm':
-        return Icons.flash_on;
-      default:
-        return Icons.help_outline;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final icon = getWeatherIcon(weatherType);
+    final icon = context.read<WeatherState>().getWeatherIcon(weatherType);
 
     return Card(
       elevation: 4,
@@ -148,7 +159,7 @@ class _CurrentWeatherCard extends StatelessWidget {
 }
 
 class _ForecastList extends StatelessWidget {
-  final List<String> forecast;
+  final List<WeatherItem> forecast;
 
   const _ForecastList({required this.forecast});
 
@@ -156,9 +167,14 @@ class _ForecastList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: forecast.map((day) {
+        final temp = day.main.temp.round();
+        final desc = day.weather.first.description;
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 4),
-          child: Padding(padding: const EdgeInsets.all(12), child: Text(day)),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text("$temp°C - $desc"),
+          ),
         );
       }).toList(),
     );
