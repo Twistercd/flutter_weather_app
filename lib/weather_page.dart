@@ -91,16 +91,16 @@ class _WeatherContent extends StatelessWidget {
           );
         }
 
-        if (state.currentTemp != null) {
+        if (state.weatherData != null) {
           return Column(
             children: [
               _CurrentWeatherCard(
-                temperature: state.currentTemp! ,
-                description: state.currentDescription!,
-                weatherType: state.currentWeatherType,
+                temperature: state.weatherData!.temp,
+                description: state.weatherData!.description,
+                weatherType: state.weatherData!.weatherType,
               ),
               const SizedBox(height: 16),
-              _ForecastList(forecast: state.forecast),
+              _ForecastList(forecast: state.weatherData!.forecast),
             ],
           );
         }
