@@ -22,47 +22,70 @@ class _WeatherPageState extends State<WeatherPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Weather"), centerTitle: true),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _CityInput(controller: _cityController),
-            const SizedBox(height: 16),
-            const _WeatherContent(),
-          ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF1a1a2e),
+              Color(0xFF16213e),
+              Color(0xFF0f3460),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              _SearchBar(controller: _cityController),
+              const SizedBox(height: 8),
+              const Expanded(child: _WeatherContent()),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _CityInput extends StatelessWidget {
+class _SearchBar extends StatelessWidget {
   final TextEditingController controller;
 
-  const _CityInput({required this.controller});
+  const _SearchBar({required this.controller});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              hintText: "Enter city",
-              border: OutlineInputBorder(),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: "Enter city",
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.1),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () {
-            context.read<WeatherState>().fetchWeather(controller.text);
-          },
-        ),
-      ],
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: () {
+              context.read<WeatherState>().fetchWeather(controller.text);
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -75,41 +98,45 @@ class _WeatherContent extends StatelessWidget {
     return Consumer<WeatherState>(
       builder: (context, state, _) {
         if (state.isLoading) {
-          return const Padding(
-            padding: EdgeInsets.only(top: 32),
-            child: CircularProgressIndicator(),
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white),
           );
         }
 
         if (state.errorMessage != null) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 32),
+          return Center(
             child: Text(
-              state.errorMessage! ,
-              style: const TextStyle(color: Colors.red),
+              state.errorMessage!,
+              style: const TextStyle(color: Colors.redAccent),
+              textAlign: TextAlign.center,
             ),
           );
         }
 
         if (state.weatherData != null) {
+          final data = state.weatherData!;
           return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _CurrentWeatherCard(
-                temperature: state.weatherData!.temp,
-                description: state.weatherData!.description,
-                weatherType: state.weatherData!.weatherType,
+              _CityHeader(cityName: data.cityName),
+              _MainWeatherInfo(
+                temp: data.temp,
+                description: data.description,
+                weatherType: data.weatherType,
               ),
-              const SizedBox(height: 16),
-              _ForecastList(forecast: state.weatherData!.forecast),
+              _ForecastRow(forecast: data.forecast),
             ],
           );
         }
 
-        return const Padding(
-          padding: EdgeInsets.only(top: 32),
+        return Center(
           child: Text(
-            "Enter a city to see the weather forecast",
-            style: TextStyle(color: Colors.grey),
+            "Enter a city to see\nthe weather forecast",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 18,
+            ),
           ),
         );
       },
@@ -117,13 +144,31 @@ class _WeatherContent extends StatelessWidget {
   }
 }
 
-class _CurrentWeatherCard extends StatelessWidget {
-  final int temperature;
+class _CityHeader extends StatelessWidget {
+  final String cityName;
+  const _CityHeader({required this.cityName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      cityName,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 36,
+        fontWeight: FontWeight.w300,
+        letterSpacing: 2,
+      ),
+    );
+  }
+}
+
+class _MainWeatherInfo extends StatelessWidget {
+  final int temp;
   final String description;
   final String? weatherType;
 
-  const _CurrentWeatherCard({
-    required this.temperature,
+  const _MainWeatherInfo({
+    required this.temp,
     required this.description,
     required this.weatherType,
   });
@@ -132,51 +177,83 @@ class _CurrentWeatherCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final icon = context.read<WeatherState>().getWeatherIcon(weatherType);
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(icon, size: 48),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "$temperature°C",
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                Text(description),
-              ],
-            ),
-          ],
+    return Column(
+      children: [
+        Icon(icon, size: 80, color: Colors.white),
+        const SizedBox(height: 16),
+        Text(
+          "$temp°",
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 80,
+            fontWeight: FontWeight.w100,
+          ),
         ),
-      ),
+        Text(
+          description,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.8),
+            fontSize: 20,
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _ForecastList extends StatelessWidget {
+class _ForecastRow extends StatelessWidget {
   final List<WeatherItem> forecast;
 
-  const _ForecastList({required this.forecast});
+  const _ForecastRow({required this.forecast});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: forecast.map((day) {
-        final temp = day.main.temp.round();
-        final desc = day.weather.first.description;
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text("$temp°C - $desc"),
-          ),
-        );
-      }).toList(),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: forecast.map((day) {
+          final icon = context.read<WeatherState>().getWeatherIcon(
+            day.weather.first.main,
+          );
+          final temp = day.main.temp.round();
+          final date = DateTime.fromMillisecondsSinceEpoch(day.dt * 1000);
+          final weekday = _weekday(date.weekday);
+
+          return Column(
+            children: [
+              Text(
+                weekday,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Icon(icon, color: Colors.white, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                "$temp°",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
     );
+  }
+
+  String _weekday(int weekday) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[weekday - 1];
   }
 }

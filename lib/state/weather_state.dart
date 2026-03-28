@@ -34,7 +34,7 @@ class WeatherState extends ChangeNotifier {
     switch (type) {
       case 'Clear': return Icons.wb_sunny;
       case 'Clouds': return Icons.cloud;
-      case 'Rain': return Icons.umbrella;
+      case 'Rain': return Icons.water_drop;
       case 'Drizzle': return Icons.grain;
       case 'Thunderstorm': return Icons.flash_on;
       case 'Snow': return Icons.ac_unit;
