@@ -45,8 +45,4 @@ app.*.map.json
 /android/app/release
 
 lib/local.dart
-lib/data/models/weather_city.g.dart
-lib/data/models/weather_condition.g.dart
-lib/data/models/weather_item.g.dart
-lib/data/models/weather_main.g.dart
-lib/data/models/weather_response.g.dart
+*.g.dart
