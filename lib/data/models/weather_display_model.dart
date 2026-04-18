@@ -32,7 +32,7 @@ class WeatherDisplayModel {
       temp: current.main.temp.round(),
       description: current.weather.first.description,
       weatherType: current.weather.first.main,
-      forecast: byDate.values.take(3).toList(),
+      forecast: byDate.values.skip(1).take(3).toList(),
     );
   }
 }

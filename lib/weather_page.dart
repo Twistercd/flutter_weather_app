@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'state/weather_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'bloc/weather_bloc.dart';
+import 'bloc/weather_event.dart';
+import 'bloc/weather_state.dart';
 import 'data/models/weather_item.dart';
-import 'package:provider/provider.dart';
 
 class WeatherPage extends StatefulWidget {
   const WeatherPage({super.key});
@@ -66,9 +68,11 @@ class _SearchBar extends StatelessWidget {
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: "Enter city",
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                hintStyle: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                ),
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.1),
+                fillColor: Colors.white.withValues(alpha: 0.1),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
@@ -81,7 +85,9 @@ class _SearchBar extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white),
             onPressed: () {
-              context.read<WeatherState>().fetchWeather(controller.text);
+              context.read<WeatherBloc>().add(
+                FetchWeatherEvent(controller.text),
+              );
             },
           ),
         ],
@@ -95,26 +101,26 @@ class _WeatherContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<WeatherState>(
-      builder: (context, state, _) {
-        if (state.isLoading) {
+    return BlocBuilder<WeatherBloc, WeatherState>(
+      builder: (context, state) {
+        if (state is WeatherLoading) {
           return const Center(
             child: CircularProgressIndicator(color: Colors.white),
           );
         }
 
-        if (state.errorMessage != null) {
+        if (state is WeatherError) {
           return Center(
             child: Text(
-              state.errorMessage!,
+              state.message,
               style: const TextStyle(color: Colors.redAccent),
               textAlign: TextAlign.center,
             ),
           );
         }
 
-        if (state.weatherData != null) {
-          final data = state.weatherData!;
+        if (state is WeatherLoaded) {
+          final data = state.data;
           return Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -134,7 +140,7 @@ class _WeatherContent extends StatelessWidget {
             "Enter a city to see\nthe weather forecast",
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
+              color: Colors.white.withValues(alpha: 0.6),
               fontSize: 18,
             ),
           ),
@@ -173,9 +179,21 @@ class _MainWeatherInfo extends StatelessWidget {
     required this.weatherType,
   });
 
+  IconData _getWeatherIcon(String? type) {
+    switch (type) {
+      case 'Clear': return Icons.wb_sunny;
+      case 'Clouds': return Icons.cloud;
+      case 'Rain': return Icons.water_drop;
+      case 'Drizzle': return Icons.grain;
+      case 'Thunderstorm': return Icons.flash_on;
+      case 'Snow': return Icons.ac_unit;
+      default: return Icons.wb_cloudy;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final icon = context.read<WeatherState>().getWeatherIcon(weatherType);
+    final icon = _getWeatherIcon(weatherType);
 
     return Column(
       children: [
@@ -192,7 +210,7 @@ class _MainWeatherInfo extends StatelessWidget {
         Text(
           description,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
             fontSize: 20,
           ),
         ),
@@ -212,15 +230,13 @@ class _ForecastRow extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: forecast.map((day) {
-          final icon = context.read<WeatherState>().getWeatherIcon(
-            day.weather.first.main,
-          );
+          final icon = _getWeatherIcon(day.weather.first.main);
           final temp = day.main.temp.round();
           final date = DateTime.fromMillisecondsSinceEpoch(day.dt * 1000);
           final weekday = _weekday(date.weekday);
@@ -230,7 +246,7 @@ class _ForecastRow extends StatelessWidget {
               Text(
                 weekday,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                   fontSize: 14,
                 ),
               ),
@@ -250,6 +266,18 @@ class _ForecastRow extends StatelessWidget {
         }).toList(),
       ),
     );
+  }
+
+  IconData _getWeatherIcon(String? type) {
+    switch (type) {
+      case 'Clear': return Icons.wb_sunny;
+      case 'Clouds': return Icons.cloud;
+      case 'Rain': return Icons.water_drop;
+      case 'Drizzle': return Icons.grain;
+      case 'Thunderstorm': return Icons.flash_on;
+      case 'Snow': return Icons.ac_unit;
+      default: return Icons.wb_cloudy;
+    }
   }
 
   String _weekday(int weekday) {

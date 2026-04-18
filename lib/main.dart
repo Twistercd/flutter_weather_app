@@ -3,16 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'local.dart';
 import 'data/weather_repository.dart';
 import 'weather_page.dart';
+import 'bloc/weather_bloc.dart';
 
 void main() {
-  runApp(
-    BlocProvider(
-      create: (_) => WeatherBloc(
-        WeatherRepository(openWeatherApiKey)
-      ),
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -20,10 +14,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       title: 'Weather App',
       debugShowCheckedModeBanner: false,
-      home: WeatherPage(),
+      home: BlocProvider(
+        create: (_) => WeatherBloc(
+          WeatherRepository(openWeatherApiKey),
+        ),
+        child: const WeatherPage(),
+      ),
     );
   }
 }
