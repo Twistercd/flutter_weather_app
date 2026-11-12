@@ -42,13 +42,18 @@ The app follows a layered architecture:
    flutter pub get
 ```
 
-3. Create a `lib/local.dart` file with your API key
+3. Generate JSON model code
+```bash
+   dart run build_runner build --delete-conflicting-outputs
+```
+
+4. Create a `lib/local.dart` file with your API key
 ```dart
    const String openWeatherApiKey = 'YOUR_API_KEY';
 ```
    Get your free API key at [openweathermap.org](https://openweathermap.org/api)
 
-4. Run the app
+5. Run the app
 ```bash
    flutter run
 ```
