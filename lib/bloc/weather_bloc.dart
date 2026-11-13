@@ -1,3 +1,4 @@
+import 'package:flutter_application_1/data/weather_exception.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../data/weather_repository.dart';
 import '../data/models/weather_display_model.dart';
@@ -20,8 +21,12 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     try {
       final data = await repository.fetchWeather(event.city);
       emit(WeatherLoaded(WeatherDisplayModel.fromResponse(data)));
+    } on WeatherException catch (e) {
+      emit(WeatherError(e.message));
     } catch (e) {
-      emit(WeatherError(e.toString()));
+      emit(
+        WeatherError("Something went wrong. Check your internet connection"),
+      );
     }
   }
 }
