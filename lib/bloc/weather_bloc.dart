@@ -1,4 +1,4 @@
-import 'package:flutter_application_1/data/weather_exception.dart';
+import '../data/weather_exception.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../data/weather_repository.dart';
 import '../data/models/weather_display_model.dart';
